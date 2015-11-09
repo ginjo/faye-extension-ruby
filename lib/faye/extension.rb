@@ -7,8 +7,10 @@ module Faye
     extend Forwardable
     
     class << self
-      attr_accessor :faye_server, :faye_client, :redis_client
+      attr_accessor :faye_server, :faye_client, :redis_client, :children
     end
+    
+    @children = []
     
     def_delegators self, :faye_server, :faye_client, :redis_client
   
@@ -58,9 +60,14 @@ module Faye
     end # self.outgoing
 
 
-    def self.descendants
-      ObjectSpace.each_object(singleton_class).select {|klass| klass < self }.reverse
+    # def self.descendants
+    #   ObjectSpace.each_object(singleton_class).select {|klass| klass < self }.reverse
+    # end
+    
+    def self.inherited(child)
+      @children << child
     end
+      
   
     def client_subscriptions(client_id)
       subscriptions = redis_client.smembers "/clients/#{client_id}/channels"

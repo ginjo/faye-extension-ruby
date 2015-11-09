@@ -11,7 +11,7 @@ class Faye::RackAdapter
     initialize_original(*args)
     Faye::Extension.faye_server = self
     Faye::Extension.faye_client = get_client
-    Faye::Extension.descendants.each{|d| puts "Faye::RackAdapter adding extension #{d.name}"; add_extension(d.new)}
+    Faye::Extension.children.each{|d| puts "Faye::RackAdapter adding extension #{d.name}"; add_extension(d.new)}
     Faye::Extension.redis_client = Redis.new #:host=>'localhost', :port=>6379
     EM.next_tick do
       Faye::Extension.faye_client.publish('/foo', {action: "Server", text: 'A new faye server in-process client is online', timestamp:DateTime.now})
