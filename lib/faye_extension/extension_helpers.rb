@@ -16,6 +16,7 @@ module FayeExtension
     end
 
     def is_subscribing_to_private_channel(message)
+      #puts "FayeExtension::Helpers#is_subscribing_to_private_channel CHANNEL: #{message['channel']} SUBSCRPT: #{message['subscription']} CLIENTID: #{message['clientId']}"
       message['channel'] == '/meta/subscribe' &&
       message['subscription'] =~ Regexp.new(message['clientId']) &&
       true

@@ -9,9 +9,7 @@ Faye::Extension.send :include, FayeExtension::Helpers
 require "faye_extension/extensions"
   
   
-module FayeExtension
-
-end # FayeExtension
+module FayeExtension; end
   
 # For testing
 def get_recent_messages

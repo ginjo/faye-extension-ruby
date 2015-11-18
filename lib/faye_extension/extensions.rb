@@ -31,7 +31,7 @@ module FayeExtension
   class LogMessageInfo < Faye::Extension
     incoming do #|message, request, callback|
       unless message['channel'] == '/meta/connect' ##|| message['connectionType'] == 'in-process'
-        #puts ["#{request.env['REMOTE_ADDR'] rescue 'SERVER'}", "MESSAGE (incoming): #{message}", "REQUEST: #{request.object_id}"].join('; ')
+        puts ["#{request.env['REMOTE_ADDR'] rescue 'SERVER'}", "MESSAGE (incoming): #{message.inspect}", "REQUEST: #{request.object_id}"].join('; ')
       end
     end
   end
@@ -64,6 +64,9 @@ module FayeExtension
   end
 
   # Add extension to send recent messages upon subscription.
+  # TODO: The private server subscription should be the first one subscribed on the client side,
+  # otherwise we get confused as to how to handle feedback from regular subscriptions...
+  # There always needs to be a private feedback channel: the private-client-server subscription.
   class SendRecentMessages < Faye::Extension
     incoming do #|message, request, callback|
       callback.call(message)
@@ -78,7 +81,7 @@ module FayeExtension
         Thread.new do
           begin
             sleep 1 # required to allow subscription to complete first.
-            #puts "SLEPT FOR 1 SEC"        
+            #puts "SendRecentMessages new thread SLEPT FOR 1 SEC"        
 
             # This bypass will force push all subscriptions it can find, on each new subscription run.
             #subscriptions = [client_subscriptions(client_id), [message['subscription']] ].flatten
@@ -86,27 +89,30 @@ module FayeExtension
             # Only send recent messages if this is the private subscription,
             # or if the private subscription already exists (and this is not it).
             subscriptions = case
-              when is_subscribing_to_private_channel(client_id)
+              # TODO: This condition should probably be removed.
+              # Private-channel subscription should always be the first to load from client side. 
+              when nil && is_subscribing_to_private_channel(message)
                 # send recent messages from all previously subscribed channels.
-                #puts "SendRecentMessages#incoming #{client_id} is subscribing to private channel"
+                #puts "SendRecentMessages#incoming #{client_id} is subscribing to private channel\n"
                 client_subscriptions(client_id)
               when has_private_subscription(client_id)
                 # send recent messages from this currently subscribed channel
                 #puts "SendRecentMessages#incoming #{client_id} has private channel"
                 [message['subscription']]
               else
-                #puts "SendRecentMessages#incoming #{client_id} has no subscriptions"
+                #puts "SendRecentMessages#incoming #{client_id} has no private channel yet"
             end
       
             if subscriptions
-              #puts "SendRecentMessages#incoming has subscriptions #{subscriptions}"
+              #puts "SendRecentMessages#incoming sending recent messages for subscriptions #{subscriptions}"
               channels = channels_matching_subscriptions(subscriptions, '/recent')
               # messages_as_yaml = channels.map{|ch| redis_client.lrange(ch, -5, -1)}.flatten
               # messages = messages_as_yaml.map{|msg| YAML.load(msg)['data']}
               messages = get_messages(channels, -5, -1, [:[], 'data'])
-      
-
-              faye_client.publish("/#{client_id}", {action: "add", data: messages })
+              
+              EM.next_tick do  # This prevents a locking condition when using Puma.
+                faye_client.publish("/#{client_id}", {action: "add", data: messages })
+              end
             end # if
           rescue
             puts "ERROR: SendRecentMessages Thread #{$!}\n"
