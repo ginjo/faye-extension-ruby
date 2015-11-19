@@ -1,28 +1,25 @@
 require 'faye'
 require File.expand_path('../rack_adapter', __FILE__)
 require 'forwardable'
-require 'redis'
 
 module Faye
-
   class Extension
     extend Forwardable
-    
+    @children = []
+  
     class << self
       attr_accessor :faye_server, :faye_client, :redis_client, :children
     end
-    
-    @children = []
-    
+
     def_delegators self, :faye_server, :faye_client, :redis_client
   
     attr_accessor :message, :request, :callback
+  
   
     # Take a block and yield it inside an instance :incoming method,
     # with the usual arguments (message, request, callback).
     # The base :incoming method will handle callback & errors,
     # so you just supply the custom code with 'incoming do |message,request,callback| block'
-  
     def self.incoming(&block)
       @incoming_proc = block
       self.send :define_method, :incoming do |message, request, callback|
@@ -61,6 +58,16 @@ module Faye
       end # define_method
     end # self.outgoing
     
+    def added(*args)
+      puts "Faye::RackAdapter adding extension #{self.class.name}";
+    end
+    
+    def removed(*args)
+      puts "Faye::RackAdapter removing extension #{self.class.name}";
+    end
+    
+    
+    
     def self.inherited(child)
       @children << child
     end
@@ -74,11 +81,20 @@ module Faye
       self.faye_client = adapter.get_client
       self.register_extensions(adapter)
       # TODO: pass args to redis client instantiation.
-      self.redis_client = ::Redis.new #:host=>'localhost', :port=>6379
+      #self.redis_client = ::Redis.new #:host=>'localhost', :port=>6379
+      # For dev only, remove before publishing.
+      EM.next_tick do
+        faye_client.publish('/foo', {action: "Server", text: 'A new faye server in-process client is online', timestamp:DateTime.now})
+      end
     end
     
-    def added(*args)
-      puts "Faye::RackAdapter adding extension #{self.class.name}";
+    def self.load_helpers
+      require 'faye_extension/extension_helpers'
+      include Helpers
+    end
+    
+    def self.load_extensions
+      require 'faye_extension/extensions'
     end
   
   end # Extension
