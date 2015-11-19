@@ -39,7 +39,7 @@ module FayeExtension
   # Add extension to intercept private client-server messages.
   # Note that execptions (all?) in an extension will not bubble up to surface.
   # Instead, they will cause the message to fail... and retry over & over in some cases.
-  class InterceptPrivateMessage < Faye::Extension
+  class HandlePrivateMessage < Faye::Extension
     incoming do #|message, request, callback|
       if message['channel'] == '/meta/private' && message['data'] && (message['data']['client_key'] || message['clientId'])
         uuid = message['data']['client_key'] || message['clientId']
@@ -122,5 +122,25 @@ module FayeExtension
       end # if
     end # incoming
   end # SendRecentMessages
+  
+  # # Experimental auto-subscript of private client-server channel.
+  # # Doesn't work, but the problem is js client has no way to alter subscription after success.
+  # class SubscribePrivate < Faye::Extension
+  #   incoming do
+  #     if message['channel'] == '/meta/subscribe' && message['subscription'] == '/private/server'
+  #       message['subscription'] = "/#{message['clientId']}"
+  #       message['ext'] = '/private/server'
+  #     end
+  #   end
+  #   
+  #   outgoing do
+  #     if message['channel'] == '/meta/subscribe' #&& message['ext'] == '/private/server'
+  #       puts "SubscribePrivate#outgoing message before: #{message.inspect}"
+  #       message['ext'] = "/private/server#{message['subscription']}"
+  #       message['subscription'] = "/private/server"
+  #       puts "SubscribePrivate#outgoing message after: #{message.inspect}"
+  #     end
+  #   end
+  # end
   
 end # FayeExtension

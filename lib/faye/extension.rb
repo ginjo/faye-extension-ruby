@@ -1,6 +1,7 @@
 require 'faye'
 require File.expand_path('../rack_adapter', __FILE__)
 require 'forwardable'
+require 'redis'
 
 module Faye
 
@@ -62,6 +63,22 @@ module Faye
     
     def self.inherited(child)
       @children << child
+    end
+    
+    def self.register_extensions(adapter)
+      children.each{|d| adapter.add_extension(d.new)}
+    end
+    
+    def self.setup(adapter)
+      self.faye_server = adapter
+      self.faye_client = adapter.get_client
+      self.register_extensions(adapter)
+      # TODO: pass args to redis client instantiation.
+      self.redis_client = ::Redis.new #:host=>'localhost', :port=>6379
+    end
+    
+    def added(*args)
+      puts "Faye::RackAdapter adding extension #{self.class.name}";
     end
   
   end # Extension
