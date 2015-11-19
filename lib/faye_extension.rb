@@ -13,7 +13,7 @@ require "faye_extension/extensions"
   
   
 module FayeExtension
-  def self.post_message(channel, data, ext={})
+  def self.post_http_message(channel, data, ext={})
     message = {:channel => channel, :data => data, :ext => ext}
     uri = URI.parse("http://localhost:9292/fayeserver")
     Net::HTTP.post_form(uri, :message => message.to_json)
