@@ -8,7 +8,7 @@ module Faye
     @children = []
   
     class << self
-      attr_accessor :faye_server, :faye_client, :redis_client, :children
+      attr_reader :faye_server, :faye_client, :redis_client, :children
     end
 
     def_delegators self, :faye_server, :faye_client, :redis_client
@@ -77,9 +77,9 @@ module Faye
     end
     
     def self.setup(adapter)
-      self.faye_server = adapter
-      self.faye_client = adapter.get_client
-      self.register_extensions(adapter)
+      @faye_server = adapter
+      @faye_client = adapter.get_client
+      register_extensions(adapter)
       # TODO: pass args to redis client instantiation.
       #self.redis_client = ::Redis.new #:host=>'localhost', :port=>6379
       # For dev only, remove before publishing.

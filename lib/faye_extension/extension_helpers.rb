@@ -52,7 +52,7 @@ module Faye
       end
       
       def self.included(parent)
-        parent.redis_client = ::Redis.new #:host=>'localhost', :port=>6379
+        parent.instance_variable_set(:@redis_client, ::Redis.new) #:host=>'localhost', :port=>6379
       end
     
     end # Helpers
