@@ -1,5 +1,5 @@
 require 'faye'
-require File.expand_path('../rack_adapter', __FILE__)
+require File.expand_path('../../faye_extension/rack_adapter', __FILE__)
 require 'forwardable'
 
 module Faye
