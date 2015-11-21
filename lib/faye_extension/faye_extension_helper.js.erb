@@ -1,4 +1,12 @@
 // JS FUNCTIONS
+// TODO: extract knockout & custom functions back into 'websocket_faye_redis_knockout' example app
+// TODO: somehow pass this file thru erb, giving it the hostname, port, server-path from ruby.
+//       ERB.new(File.read('lib/faye_extension/faye-extension.js.erb')).result
+
+
+hostname = document.location.hostname;
+portnum = document.location.port;
+mount = "<%= @options[:mount] %>";
 
 // Put new message at end of messages div.
 function appendMessage(msg){
@@ -84,7 +92,7 @@ function subscribePrivate(uuid) {
 // DOM LOADED
 document.addEventListener("DOMContentLoaded", function() {
 	// Connect to fay server
-	faye = new Faye.Client('http://' + hostname + ':' + portnum + '/fayeserver');
+	faye = new Faye.Client('http://' + hostname + ':' + portnum + mount);
 
 	// Create a private channel with the server.
 	//ajax('GET', '/ws/subscribe', function(xhttp){subscribePrivate(xhttp.responseText)});

@@ -3,6 +3,8 @@ require 'net/http'
 require 'redis'
 require 'json'
 
+# TODO: Figure out how to handle the hardcoded URLs below ('http://localhost:9292/fayeserver').
+
 module Faye
   class Extension
     module Helpers
