@@ -2,6 +2,8 @@
 
 Adds an Extension class to help construct Faye server extensions. Enhances Faye and Faye::Extension with optional helpers to facilitate pub/sub, private messaging, rpc, and data updates in the context of your Rack App.
 
+This software is still in experimental stage.
+
 
 ## Installation
 
