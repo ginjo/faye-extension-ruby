@@ -1,4 +1,4 @@
-Copyright (c) 2015 wbr
+Copyright (c) 2015 William Richardson
 
 MIT License
 
