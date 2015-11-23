@@ -1,4 +1,4 @@
-require 'faye/extension'
+#require 'faye/extension'
 
 module Faye
   class Extension
