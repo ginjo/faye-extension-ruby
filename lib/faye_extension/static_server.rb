@@ -4,7 +4,7 @@ module Faye
   
   class StaticServer
     
-    # Intercept the File.read method to process thru erb, if appropriate.
+    # Intercept the File.read method to process thru erb, if applicable.
     class File < ::File
       def self.read(path)
         #puts "FILE.READ path: #{path}"
@@ -26,7 +26,6 @@ module Faye
   # Array of Faye StaticServer objects,
   # so we can add some static files to
   # to be available from the Faye server.
-  # Or not so static files, processed by erb.
   class StaticServerArray < Array
     def call(env)
       static_server = (self =~ (env['PATH_INFO']))
@@ -38,10 +37,12 @@ module Faye
       end
     end
     
+    # Call 'map' on each StaticServer.
     def map(*args)
       each {|x| x.map(*args)}
     end
     
+    # Call '=~' on StaticServer that matches path.
     def =~(path)
       #puts "STATIC-SERVER-ARRAY#=~ path: #{path.inspect}"
       detect {|x| x =~ path}

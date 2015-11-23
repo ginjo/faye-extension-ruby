@@ -6,12 +6,16 @@ require 'faye_extension/static_server'
 
 module Faye
   class RackAdapter
+    
+    attr_reader :app, :options, :endpoint, :extensions, :endpoint_re, :server, :static, :client
+    
     alias_method :initialize_original, :initialize
   
     def initialize(*args)
       initialize_original(*args)
       Faye::Extension.setup(self)
       load_custom_static_server
+      add_reference_to_app
       self
     end
     
@@ -23,9 +27,17 @@ module Faye
       #puts @static.to_yaml
     end
     
+    def add_reference_to_app
+      faye = self
+      @app.instance_eval do
+        @faye = faye
+        define_singleton_method(:faye){ @faye }
+      end
+    end
+    
     def get_binding
       binding
     end
-  
+      
   end
 end

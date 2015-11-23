@@ -54,6 +54,9 @@ module Faye
       end
       
       def self.included(parent)
+        # TODO: Figure out how to get redis connection params from faye, before faye starts up..
+        #puts "NEW_REDIS_CLIENT for parent #{parent.inspect}"
+        #puts [parent.faye_server.options.inspect]
         parent.instance_variable_set(:@redis_client, ::Redis.new) #:host=>'localhost', :port=>6379
       end
     
@@ -61,13 +64,14 @@ module Faye
   end # Extension
 end # Faye
 
-
+# Top-level method publish to faye with net-http.
 def faye_publish_http_message(channel, data, ext={})
   message = {:channel => channel, :data => data, :ext => ext}
   uri = URI.parse("http://localhost:9292/fayeserver")
   Net::HTTP.post_form(uri, :message => message.to_json)
 end
 
+# Top-level method publish to faye with EM faye-client.
 def faye_publish_message(channel, data, ext={})
   EM.run do
     client = Faye::Client.new('http://localhost:9292/fayeserver')
