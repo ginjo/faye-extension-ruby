@@ -2,6 +2,21 @@ require 'faye'
 require File.expand_path('../../faye_extension/rack_adapter', __FILE__)
 require 'forwardable'
 
+
+# TODO: Types of messages (the internal 'data' component, the part the client sees), should be:
+#       action: chat, text: 'the message'
+#       action: create/update/delete, model: the-knockout-model, data: the-data-array-or-hash
+#       action: call, function: fn-name, data: argument-array-or-hash
+#       any more?
+#
+#       OR, maybe just make 'action' be the method, and 'data' be the params, for everything.
+#
+# NOTE: Design subscription logic so that any channel can get any message.
+# Channels should only be used to route messages, not to provide processing logic.
+# Use a MessageHandler class in js to process all incoming messages.
+
+
+
 module Faye
   class Extension
     extend Forwardable
