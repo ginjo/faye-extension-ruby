@@ -20,15 +20,7 @@ module Faye
         end
       end
     end # File
-    
-    # def self.get_static_server_array(static)
-    #   custom_static = new(File.expand_path('../../faye_extension', __FILE__), /(?:extension\.js(\.erb)?)$/)
-    #   custom_static.map('extension.js', 'faye_extension_helper.js.erb')
-    #   StaticServerArray.new << custom_static << static
-    #   #puts "STATIC-SERVER-ARRAY"
-    #   #puts @static.to_yaml
-    # end
-    
+
   end # StaticServer
 
 
@@ -37,10 +29,11 @@ module Faye
   # to be available from the Faye server.
   class StaticServerArray < Array
     
+    # Build new instance from existing static-server plus new static-server.
     def initialize(existing_static, *params_for_new_static)
       custom_static = StaticServer.new(*params_for_new_static)
       self << custom_static << existing_static
-      puts "NEW-STATIC-SERVER-ARRAY #{self}"
+      #puts "NEW-STATIC-SERVER-ARRAY #{self}"
       self
     end
     

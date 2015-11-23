@@ -89,6 +89,7 @@ module Faye
     end
     
     def self.set_redis_client
+      return unless @faye_server
       faye_engine_options = @faye_server.options[:engine]
       redis_options = faye_engine_options[:type].name=="Faye::Redis" ? faye_engine_options : {}
       @redis_client = ::Redis.new redis_options
@@ -96,7 +97,6 @@ module Faye
     
     def self.load_helpers
       require 'faye_extension/extension_helpers'
-      include Helpers
     end
     
     def self.load_extensions
