@@ -21,12 +21,29 @@ module Faye
       end
     end # File
     
-  end # StaticServer
+    # def self.get_static_server_array(static)
+    #   custom_static = new(File.expand_path('../../faye_extension', __FILE__), /(?:extension\.js(\.erb)?)$/)
+    #   custom_static.map('extension.js', 'faye_extension_helper.js.erb')
+    #   StaticServerArray.new << custom_static << static
+    #   #puts "STATIC-SERVER-ARRAY"
+    #   #puts @static.to_yaml
+    # end
     
+  end # StaticServer
+
+
   # Array of Faye StaticServer objects,
   # so we can add some static files to
   # to be available from the Faye server.
   class StaticServerArray < Array
+    
+    def initialize(existing_static, *params_for_new_static)
+      custom_static = StaticServer.new(*params_for_new_static)
+      self << custom_static << existing_static
+      puts "NEW-STATIC-SERVER-ARRAY #{self}"
+      self
+    end
+    
     def call(env)
       static_server = (self =~ (env['PATH_INFO']))
       if static_server.respond_to?(:call)
@@ -46,7 +63,7 @@ module Faye
     def =~(path)
       #puts "STATIC-SERVER-ARRAY#=~ path: #{path.inspect}"
       detect {|x| x =~ path}
-    end  
+    end
   end # StaticServerArray
   
 end # Fay

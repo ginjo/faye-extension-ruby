@@ -14,18 +14,20 @@ module Faye
     def initialize(*args)
       initialize_original(*args)
       Faye::Extension.setup(self)
-      load_custom_static_server
+      #load_custom_static_server
+      @static = StaticServerArray.new(@static, File.expand_path('../../faye_extension', __FILE__), /(?:extension\.js(\.erb)?)$/)
+      @static[0].map('extension.js', 'faye_extension_helper.js.erb')
       add_reference_to_app
       self
     end
     
-    def load_custom_static_server
-      custom_static = StaticServer.new(File.expand_path('../../faye_extension', __FILE__), /(?:extension\.js(\.erb)?)$/)
-      custom_static.map('extension.js', 'faye_extension_helper.js.erb')
-      @static = StaticServerArray.new << custom_static << @static
-      #puts "STATIC-SERVER-ARRAY"
-      #puts @static.to_yaml
-    end
+    # def load_custom_static_server
+    #   custom_static = StaticServer.new(File.expand_path('../../faye_extension', __FILE__), /(?:extension\.js(\.erb)?)$/)
+    #   custom_static.map('extension.js', 'faye_extension_helper.js.erb')
+    #   @static = StaticServerArray.new << custom_static << @static
+    #   #puts "STATIC-SERVER-ARRAY"
+    #   #puts @static.to_yaml
+    # end
     
     def add_reference_to_app
       faye = self

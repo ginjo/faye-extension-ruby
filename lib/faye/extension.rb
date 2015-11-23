@@ -76,16 +76,22 @@ module Faye
       children.each{|d| adapter.add_extension(d.new)}
     end
     
+    # Setup faye extension class from new Faye::RackAdapter
     def self.setup(adapter)
       @faye_server = adapter
       @faye_client = adapter.get_client
       register_extensions(adapter)
-      # TODO: pass args to redis client instantiation.
-      #self.redis_client = ::Redis.new #:host=>'localhost', :port=>6379
-      # For dev only, remove before publishing.
+      set_redis_client
+      # TODO: For dev only, remove before publishing to public.
       EM.next_tick do
         faye_client.publish('/foo', {action: "Server", text: 'A new faye server in-process client is online', timestamp:DateTime.now})
       end
+    end
+    
+    def self.set_redis_client
+      faye_engine_options = @faye_server.options[:engine]
+      redis_options = faye_engine_options[:type].name=="Faye::Redis" ? faye_engine_options : {}
+      @redis_client = ::Redis.new redis_options
     end
     
     def self.load_helpers
