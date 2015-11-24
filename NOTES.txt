@@ -1,0 +1,37 @@
+# Is there a use case for mutliple adapters/servers in a single process?
+
+# Should Faye extensions always be added to every running adapter,
+  or could there be a case where two adapters running in same process
+  would have different extensions?
+
+# Is clientId an appropriate string to use as a client-specific
+  channel for private client-server communication?
+
+  client.subscribe("/ak3kdkfjlksd89f98s98dflkjfdfkjkjsd8f78s7dfk")
+
+  Basically, I subscribe every client to it's own private channel,
+  whenever the client opens a connection.
+
+  This has been working very well for me, as server-extensions
+  always know where to send client-specific messages. And so far,
+  no cliendId's are leaked to any other clients.
+
+# Is the following seperation-of-concerns appropriate for Faye?
+
+  I have created an architecture where Faye is only concerned with
+  who gets what message. No part of my Faye system has any knowledge
+  of what to do with the messages or what they mean. Message processing
+  is handled by a separate layer on both client and server.
+
+  Under this architecture, any channel on any client could potentially
+  receive any kind of message (chat, data-update, alert, etc..). It's
+  up to my message-processing layer to determine what to do next.
+
+# Some of the helpers in faye-extension make use of direct calls to Redis.
+  I understand this is treading on unstable ground... But is this acceptable
+  practice in the domain of a 'gem', where responsiblity for upkeep and
+  compatibility is centralized and well-defined?
+
+# Is my faye-extension gem a useful addition to the community,
+  or should I maintain it as a custom implementation for specific projects?
+
