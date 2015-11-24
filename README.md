@@ -1,42 +1,52 @@
-# faye-extension
+# faye-extension-ruby
 
 Adds an Extension class to help construct Faye server extensions. Enhances Faye and Faye::Extension with optional helpers to facilitate pub/sub, private messaging, rpc, and data updates in the context of your Rack App.
 
-This software is still in experimental stage.
+This gem is currently in experimental stage.
+
+This gem assumes your are using Redis as your Faye backend datastore (engine).
 
 
 ## Installation
 
-Add this line to your application's Gemfile:
+Gemfile:
 
     gem 'faye-extension'
 
-And then execute:
-
-    $ bundle
-
-Or install it yourself as:
+No Gemfile:
 
     $ gem install faye-extension
 
 ## Usage
 
+    require 'faye/extension'
+
+Then, before faye-server starts up, create your server extensions.
+
     class MyFayeServerExtension < Faye::Extension
 
-      # Mini-dsl to build 'incoming' method
-
       incoming do
-        # Put your 'incoming' code here.
-        # message, request, and callback are presented as instance variables,
-        # and will be propagated thru the extension chain as expected.
-        # Exceptions will abort current extension, but will not disrupt further extension processing.
+        puts [message, request, callback].to_yaml
+      end
+
+      outgoing do
+        # outgoing code here
       end
       
-      # Same as above for outgoing.
-      
-      # Optionally define your own 'added' and 'removed' methods.
-      
-      # Extension classes will be automatically added to Faye, when Faye server starts.
+      def added
+        ...
+      end
+
+      def removed
+        ...
+      end
       
     end
+
+```message```, ```request```, and ```callback``` are presented as instance variables (with accessors),
+and will be propagated thru the extension chain as expected.
+
+Exceptions will abort current extension, but will not disrupt further extension processing.
+
+Extension classes will be automatically added to Faye, when Faye server starts.
 
