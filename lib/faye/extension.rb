@@ -99,7 +99,7 @@ module Faye
       set_redis_client
       # TODO: For dev only, remove before publishing to public.
       EM.next_tick do
-        faye_client.publish('/foo', {action: "Server", text: 'A new faye server in-process client is online', timestamp:DateTime.now})
+        faye_client.publish('/foo', {action:"chat", data:{channel:'/foo', text:'A new faye server in-process client is online', timestamp:DateTime.now}})
       end
     end
     

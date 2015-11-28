@@ -4,6 +4,18 @@ require 'redis'
 require 'json'
 
 # TODO: Figure out how to handle the hardcoded URLs below ('http://localhost:9292/fayeserver').
+# TODO: The message format may not be quite right. Don't get the message format confused with the
+#       function arguments format. You might want to use :ext as a 3rd catch-all key in messages,
+#       to carry info that is not part of the function call.
+
+# Examples
+#   # View messages.
+#   Faye::Extension.redis_client.lrange('/recent/foo/bar', 0, -1).each{|m| puts m}; nil
+#   # Show all keys.
+#   puts Faye::Extension.redis_client.keys
+#   # Delete a key.
+#   puts Faye::Extension.redis_client.del('/recent/foo/bar')
+#   
 
 module Faye
   class Extension
@@ -40,15 +52,15 @@ module Faye
     end
 
     # Get messages from store in redis.
-    # This method may be too specific to finding /recent/<subscription> messages
+    # TODO: This method may be too specific to finding /recent/<subscription> messages
     def get_messages(channels, range1, range2, restrict=nil)
       #puts "FayExtension#get_messages for channels: #{channels}"
       messages_as_yaml = channels.map{|ch| redis_client.lrange(ch, range1, range2)}.flatten
       messages = messages_as_yaml.map do |msg|
         raw = YAML.load(msg)
         # This is to ignore legacy messages with no timestamp
-        next unless raw['data'] && raw['data']['timestamp'] #||= nil
-        restrict ? raw.send(*restrict) : raw        
+        next unless raw['data'] && raw['data']['timestamp'] && raw['data']['data']
+        (restrict ? raw.send(*restrict) : raw)['data']     
       end.compact #.sort{|a,b| (a['data']['timestamp'] <=> b['data']['timestamp']) rescue 0}
     end
 

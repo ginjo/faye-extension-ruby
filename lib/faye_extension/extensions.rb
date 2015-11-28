@@ -20,10 +20,14 @@ module Faye
         end
       end
 
+      # TODO: Do we really need 3 levels of timestamp?
       def add_timestamp(message)
         message['timestamp'] ||= DateTime.now
         if message['data']
           message['data']['timestamp'] ||= message['timestamp']
+        end
+        if message['data']['action'] == "chat" &&  message['data']['data']
+          message['data']['data']['timestamp'] ||= message['timestamp']
         end
         #puts "ADD_TIMESTAMP self #{self} message #{message}"
       end
@@ -33,7 +37,7 @@ module Faye
     class LogMessageInfo < Faye::Extension
       incoming do #|message, request, callback|
         unless message['channel'] == '/meta/connect' ##|| message['connectionType'] == 'in-process'
-          puts ["#{request.env['REMOTE_ADDR'] rescue 'SERVER'}", "MESSAGE (incoming): #{message['channel']}", "REQUEST: #{request.object_id}"].join('; ')
+          puts ["#{request.env['REMOTE_ADDR'] rescue 'SERVER'}", "MESSAGE (incoming): #{message}", "REQUEST: #{request.object_id}"].join('; ')
         end
       end
     end
@@ -43,13 +47,13 @@ module Faye
     # Instead, they will cause the message to fail... and retry over & over in some cases.
     class HandlePrivateMessage < Faye::Extension
       incoming do #|message, request, callback|
-        if message['channel'] == '/meta/private' && message['data'] && (message['data']['client_key'] || message['clientId'])
-          uuid = message['data']['client_key'] || message['clientId']
+        if message['channel'] == '/meta/private' &&  message['clientId']
+          uuid = message['clientId']
           #puts "SERVER RECEIVING PRIVATE MESSAGE FOR #{uuid}"
-          resp = App.new.call(request.env.merge("PATH_INFO" => message['data']['action']))
-          faye_client.publish("/#{uuid}", {action: "response", text: [message['data']['text'], (request), resp[2]].join(', ') })
-          #message['channel'] = "/#{message['data']['client_key']}"
-          #message['data'] = {action: "response", text: [message['text'], (context.request rescue context), resp[2]].join(', ') }
+          #resp = App.new.call(request.env.merge("PATH_INFO" => message['data']['action']))
+          resp = App.new.call(request.env.merge("PATH_INFO" => '/test'))
+          #faye_client.publish("/#{uuid}", {action: "chat", data: [message['data']['data'], (request), resp[2]].join(', ') })
+          faye_client.publish("/#{uuid}", { action:"chat", data:message['data']['data'] })
         end
       end
     end
@@ -65,6 +69,7 @@ module Faye
       end
     end
 
+    # BUG: This doesn't work since refactoring message format.
     # Add extension to send recent messages upon subscription.
     # TODO: The private server subscription should be the first one subscribed on the client side,
     # otherwise we get confused as to how to handle feedback from regular subscriptions...
@@ -113,7 +118,7 @@ module Faye
                 messages = get_messages(channels, -5, -1, [:[], 'data'])
             
                 EM.next_tick do  # This prevents a locking condition when using Puma.
-                  faye_client.publish("/#{client_id}", {action: "add", data: messages })
+                  faye_client.publish("/#{client_id}", {action:"chat", data:messages })
                 end
               end # if
             rescue
