@@ -9,25 +9,25 @@ module Faye
       incoming do
         #unless message['channel'] == '/meta/connect' ##|| message['connectionType'] == 'in-process'
         unless message['channel'][%r{^/meta}]
-          add_timestamp(message)
+          add_timestamp
         end
       end
 
       outgoing do
         #if !(message['channel'] == '/meta/connect') && message['data']
         unless message['channel'][%r{^/meta}]
-          add_timestamp(message)
+          add_timestamp
         end
       end
 
-      # TODO: Do we really need 3 levels of timestamp?
-      def add_timestamp(message)
+      # TODO: Do we really need 3 levels of timestamp (protocol, message, chat)?
+      def add_timestamp
         message['timestamp'] ||= DateTime.now
-        if message['data']
+        if message['data'].is_a?(Hash)
           message['data']['timestamp'] ||= message['timestamp']
-        end
-        if message['data']['action'] == "chat" &&  message['data']['data']
-          message['data']['data']['timestamp'] ||= message['timestamp']
+          if message['data']['action'] == "chat" &&  message['data']['data'].is_a?(Hash)
+            message['data']['data']['timestamp'] ||= message['timestamp']
+          end
         end
         #puts "ADD_TIMESTAMP self #{self} message #{message}"
       end
@@ -37,7 +37,7 @@ module Faye
     class LogMessageInfo < Faye::Extension
       incoming do #|message, request, callback|
         unless message['channel'] == '/meta/connect' ##|| message['connectionType'] == 'in-process'
-          puts ["#{request.env['REMOTE_ADDR'] rescue 'SERVER'}", "MESSAGE (incoming): #{message}", "REQUEST: #{request.object_id}"].join('; ')
+          puts ["#{request.env['REMOTE_ADDR'] rescue 'SERVER'}", "MESSAGE (incoming): #{message['channel']}", "REQUEST: #{request.object_id}"].join('; ')
         end
       end
     end
