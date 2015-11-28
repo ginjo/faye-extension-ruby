@@ -2,6 +2,6 @@
 
 module Faye
   class Extension
-    VERSION = "0.0.1.pre04"
+    VERSION = "0.0.1.pre05"
   end
 end

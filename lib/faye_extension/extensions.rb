@@ -116,10 +116,13 @@ module Faye
                 # messages_as_yaml = channels.map{|ch| redis_client.lrange(ch, -5, -1)}.flatten
                 # messages = messages_as_yaml.map{|msg| YAML.load(msg)['data']}
                 messages = get_messages(channels, -5, -1, [:[], 'data'])
-            
-                EM.next_tick do  # This prevents a locking condition when using Puma.
-                  faye_client.publish("/#{client_id}", {action:"chat", data:messages })
+                
+                if messages.any?
+                  EM.next_tick do  # This prevents a locking condition when using Puma.
+                    faye_client.publish("/#{client_id}", {action:"chat", data:messages })
+                  end
                 end
+                
               end # if
             rescue
               puts "ERROR: SendRecentMessages Thread #{$!}\n"
