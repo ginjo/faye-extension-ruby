@@ -21,18 +21,33 @@ function callFunc(functionName, context /*, args */) {
 // Do something with received published message.
 function handlePublishedMessage(message){
 	//console.log('HANDLING PUBLISHED MESSAGE: ' + JSON.stringify(message));
+	//console.log('handlePublishedMessage', message);
 	func = message['action'];
 	args = message['data'];
 	callFunc(func, window, args);
 	//appendMessagesToTable(message);
 }
 
-
 function fayeSubscribe(ch, fn) {
 	faye.unsubscribe(ch);
 	var subscription = faye.subscribe(ch, fn);
-	subscription.then(function(){console.log('Subscribed to ' + ch)});
+	//subscription.then(function(){console.log('Subscribed', ch)});
 	return subscription
+}
+
+// // Subscribe to private channel (to/from server)
+// function subscribePrivate(uuid) {
+// 	faye_client_uuid = (typeof(uuid) === "undefined" ? faye._dispatcher.clientId : uuid);
+//   // private_channel_subscription = fayeSubscribe('/' + faye_client_uuid, handlePublishedMessage);
+//   private_channel_subscription = fayeSubscribe('/private/server', handlePublishedMessage);
+// 
+//   return faye_client_uuid;
+// }
+
+function faye_client_uuid(){faye._dispatcher.clientId}
+
+function getTimestamp(){
+	return (new Date(Date.now()).toString());
 }
 
 FayeExt = {
@@ -54,19 +69,6 @@ FayeExt = {
 };
 // client.addExtension(FayeExt);
 
-// Subscribe to private channel (to/from server)
-function subscribePrivate(uuid) {
-	faye_client_uuid = (typeof(uuid) === "undefined" ? faye._dispatcher.clientId : uuid);
-  // private_channel_subscription = fayeSubscribe('/' + faye_client_uuid, handlePublishedMessage);
-  private_channel_subscription = fayeSubscribe('/private/server', handlePublishedMessage);
-
-  return faye_client_uuid;
-}
-
-function getTimestamp(){
-	return (new Date(Date.now()).toString());
-}
-
 // DOM LOADED
 document.addEventListener("DOMContentLoaded", function() {
 	// Connect to fay server
@@ -79,8 +81,10 @@ document.addEventListener("DOMContentLoaded", function() {
 	// I moved this to bottom of <body> on layout, but it doesn't seem to force
 	// recent messages to load last all-at-once with private subscription.
 	faye.addExtension(FayeExt);
-	faye.connect(subscribePrivate); //(guid());
+	//faye.connect(subscribePrivate); //(guid());
+	fayeSubscribe('/private/server', handlePublishedMessage)
 });
+
 
 
 

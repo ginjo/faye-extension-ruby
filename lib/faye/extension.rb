@@ -72,7 +72,15 @@ module Faye
       puts "Faye::RackAdapter removing extension #{self.class.name}";
     end
     
+    # Shortcut to clientId.
+    def client_id
+      message['clientId']
+    end
     
+    # Overwrite this with your own guid, if you prefer.
+    def client_guid
+      client_id
+    end
     
     def self.inherited(child)
       @children << child

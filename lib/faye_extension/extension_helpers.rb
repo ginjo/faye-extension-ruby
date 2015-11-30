@@ -20,7 +20,7 @@ require 'json'
 module Faye
   class Extension
   
-    def client_subscriptions(client_id)
+    def client_subscriptions
       subscriptions = redis_client.smembers "/clients/#{client_id}/channels"
       #puts "CLIENT SUBSCRIPTIONS for \"/clients/#{client_id}/channels\" #{subscriptions}\n"
       subscriptions
@@ -28,16 +28,16 @@ module Faye
       puts "ERROR FayeExtension#client_subscriptions #{$!}"
     end
 
-    def has_private_subscription(client_id)
-      redis_client.exists("/channels/#{client_id}")
+    def has_private_subscription
+      redis_client.exists("/channels/#{client_guid}")
     rescue
       puts "ERROR FayeExtension#has_private_subscription #{$!}"
     end
 
-    def is_subscribing_to_private_channel(message)
-      #puts "FayeExtension::Helpers#is_subscribing_to_private_channel CHANNEL: #{message['channel']} SUBSCRPT: #{message['subscription']} CLIENTID: #{message['clientId']}"
+    def is_subscribing_to_private_channel
+      #puts "FayeExtension::Helpers#is_subscribing_to_private_channel CHANNEL: #{message['channel']} SUBSCRPT: #{message['subscription']} CLIENTID: #{client_guid}"
       message['channel'] == '/meta/subscribe' &&
-      message['subscription'] =~ Regexp.new(message['clientId']) &&
+      (message['subscription'] =~ Regexp.new(client_guid) || message['subscription'] =~ Regexp.new(client_id) || message['subscription'] == '/private/server') &&
       true
     rescue
       puts "ERROR FayeExtension#is_subscribing_to_private_channel #{$!}"

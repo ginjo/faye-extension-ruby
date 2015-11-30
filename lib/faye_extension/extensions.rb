@@ -31,7 +31,7 @@ module Faye
         end
         #puts "ADD_TIMESTAMP self #{self} message #{message}"
       end
-    end
+    end # AddTimestamp
 
     # Add extension to log message info.
     class LogMessageInfo < Faye::Extension
@@ -51,14 +51,13 @@ module Faye
     # Instead, they will cause the message to fail... and retry over & over in some cases.
     class HandlePrivateMessage < Faye::Extension
       incoming do #|message, request, callback|
-        if message['channel'] == '/meta/private' &&  message['clientId']
+        if message['channel'] == '/meta/private' &&  client_guid
           message['channel'] = '/private'
-          uuid = message['clientId']
-          #puts "SERVER RECEIVING PRIVATE MESSAGE FOR #{uuid}"
+          #puts "SERVER RECEIVING PRIVATE MESSAGE FOR #{client_guid}"
           #resp = App.new.call(request.env.merge("PATH_INFO" => message['data']['action']))
           resp = App.new.call(request.env.merge("PATH_INFO" => '/test'))
-          #faye_client.publish("/#{uuid}", {action: "chat", data: [message['data']['data'], (request), resp[2]].join(', ') })
-          faye_client.publish("/#{uuid}", { action:"chat", data:message['data']['data'] })
+          #faye_client.publish("/#{client_guid}", {action: "chat", data: [message['data']['data'], (request), resp[2]].join(', ') })
+          faye_client.publish("/#{client_guid}", { action:"chat", data:message['data']['data'] })
         end
       end
     end
@@ -83,7 +82,6 @@ module Faye
       incoming do #|message, request, callback|
         callback.call(message)
         @callback = nil
-        client_id = message['clientId']
         if message['channel'][%r{/meta/subscribe}] && request && client_id
           #puts "SendRecentMessages#incoming #{client_id} is subscribing to #{message['subscription']}"
 
@@ -103,16 +101,16 @@ module Faye
               subscriptions = case
                 # TODO: This condition should probably be removed.
                 # Private-channel subscription should always be the first to load from client side. 
-                when nil && is_subscribing_to_private_channel(message)
+                when nil && is_subscribing_to_private_channel
                   # send recent messages from all previously subscribed channels.
-                  #puts "SendRecentMessages#incoming #{client_id} is subscribing to private channel\n"
-                  client_subscriptions(client_id)
-                when has_private_subscription(client_id)
+                  #puts "SendRecentMessages#incoming #{client_id} is subscribing to private channel #{client_guid}\n"
+                  client_subscriptions
+                when has_private_subscription
                   # send recent messages from this currently subscribed channel
-                  #puts "SendRecentMessages#incoming #{client_id} has private channel"
+                  #puts "SendRecentMessages#incoming #{client_id} has private channel #{client_guid}"
                   [message['subscription']]
                 else
-                  #puts "SendRecentMessages#incoming #{client_id} has no private channel yet"
+                  #puts "SendRecentMessages#incoming #{client_id} has no private channel yet on #{client_guid}"
               end
     
               if subscriptions
@@ -124,7 +122,7 @@ module Faye
                 
                 if messages.any?
                   EM.next_tick do  # This prevents a locking condition when using Puma.
-                    faye_client.publish("/#{client_id}", {action:"chat", data:messages })
+                    faye_client.publish("/#{client_guid}", {action:"chat", data:messages })
                   end
                 end
                 
@@ -138,27 +136,33 @@ module Faye
       end # incoming
     end # SendRecentMessages
     
+    
+    # Experimental auto-subscript of private client-server channel.
+    # Also see companion functions in extension js.
+    class SubscribePrivate < Faye::Extension
+      incoming do
+        #puts "SubscribePrivate#incoming #{message.object_id}"
+        if message['channel'] == '/meta/subscribe' && message['subscription'] == '/private/server'
+          message['subscription'] = "/#{client_guid}"
+        end
+      end
+
+      # TODO: This is flawed in that it requires us to use clientId as the private channel subscription.
+      # We should not rely on clientId to do this... but how?
+      # Trying to fix with 'client_guid'.
+      outgoing do
+        #puts "SubscribePrivate#outgoing #{message.object_id}"
+        if message['channel'] == '/meta/subscribe' && message['subscription'] == "/#{client_guid}"
+          #puts "SubscribePrivate#outgoing message before: #{message.inspect}"
+          message['ext'] = "private_subscription_response"
+          #puts "SubscribePrivate#outgoing message after: #{message.inspect}"
+        end
+      end
+    end
+    
   end # Extension
 end # Faye
 
 
 
-
-# Experimental auto-subscript of private client-server channel.
-# Also see companion functions in extension js.
-class SubscribePrivate < Faye::Extension
-  incoming do
-    if message['channel'] == '/meta/subscribe' && message['subscription'] == '/private/server'
-      message['subscription'] = "/#{message['clientId']}"
-    end
-  end
-  
-  outgoing do
-    if message['channel'] == '/meta/subscribe' && message['subscription'] == "/#{message['clientId']}"
-      #puts "SubscribePrivate#outgoing message before: #{message.inspect}"
-      message['ext'] = "private_subscription_response"
-      #puts "SubscribePrivate#outgoing message after: #{message.inspect}"
-    end
-  end
-end
 
