@@ -35,8 +35,12 @@ module Faye
 
     # Add extension to log message info.
     class LogMessageInfo < Faye::Extension
+      class << self; attr_accessor :server; end
+      def_delegators self, :server, :'server='
+      
       incoming do #|message, request, callback|
         unless message['channel'] == '/meta/connect' ##|| message['connectionType'] == 'in-process'
+          self.server = [message, request, callback] if request
           puts ["#{request.env['REMOTE_ADDR'] rescue 'SERVER'}", "MESSAGE (incoming): #{message['channel']}", "REQUEST: #{request.object_id}"].join('; ')
         end
       end
@@ -48,6 +52,7 @@ module Faye
     class HandlePrivateMessage < Faye::Extension
       incoming do #|message, request, callback|
         if message['channel'] == '/meta/private' &&  message['clientId']
+          message['channel'] = '/private'
           uuid = message['clientId']
           #puts "SERVER RECEIVING PRIVATE MESSAGE FOR #{uuid}"
           #resp = App.new.call(request.env.merge("PATH_INFO" => message['data']['action']))
@@ -139,23 +144,21 @@ end # Faye
 
 
 
-# # Experimental auto-subscript of private client-server channel.
-# # Doesn't work, but the problem is js client has no way to alter subscription after success.
-# class SubscribePrivate < Faye::Extension
-#   incoming do
-#     if message['channel'] == '/meta/subscribe' && message['subscription'] == '/private/server'
-#       message['subscription'] = "/#{message['clientId']}"
-#       message['ext'] = '/private/server'
-#     end
-#   end
-#   
-#   outgoing do
-#     if message['channel'] == '/meta/subscribe' #&& message['ext'] == '/private/server'
-#       puts "SubscribePrivate#outgoing message before: #{message.inspect}"
-#       message['ext'] = "/private/server#{message['subscription']}"
-#       message['subscription'] = "/private/server"
-#       puts "SubscribePrivate#outgoing message after: #{message.inspect}"
-#     end
-#   end
-# end
+# Experimental auto-subscript of private client-server channel.
+# Also see companion functions in extension js.
+class SubscribePrivate < Faye::Extension
+  incoming do
+    if message['channel'] == '/meta/subscribe' && message['subscription'] == '/private/server'
+      message['subscription'] = "/#{message['clientId']}"
+    end
+  end
+  
+  outgoing do
+    if message['channel'] == '/meta/subscribe' && message['subscription'] == "/#{message['clientId']}"
+      #puts "SubscribePrivate#outgoing message before: #{message.inspect}"
+      message['ext'] = "private_subscription_response"
+      #puts "SubscribePrivate#outgoing message after: #{message.inspect}"
+    end
+  end
+end
 

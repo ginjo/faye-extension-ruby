@@ -20,7 +20,7 @@ function callFunc(functionName, context /*, args */) {
 
 // Do something with received published message.
 function handlePublishedMessage(message){
-	console.log('HANDLING PUBLISHED MESSAGE: ' + JSON.stringify(message));
+	//console.log('HANDLING PUBLISHED MESSAGE: ' + JSON.stringify(message));
 	func = message['action'];
 	args = message['data'];
 	callFunc(func, window, args);
@@ -35,10 +35,31 @@ function fayeSubscribe(ch, fn) {
 	return subscription
 }
 
+FayeExt = {
+  incoming: function(message, callback) {
+    if(message['channel'] != '/meta/connect') {console.log('faye-incoming', message)}
+    if(message['ext'] == 'private_subscription_response' && message['channel'] == '/meta/subscribe'){
+			private_subscription = message['subscription'];
+			faye._channels._channels[private_subscription] = faye._channels._channels['/private/server'];
+			faye._channels._channels[private_subscription]['id'] = private_subscription
+			faye._channels._channels[private_subscription]['name'] = private_subscription
+			delete faye._channels._channels['/private/server'];
+		}
+    callback(message);
+  },
+  // outgoing: function(message, callback) {
+  //   console.log('outgoing', message);
+  //   callback(message);
+  // }
+};
+// client.addExtension(FayeExt);
+
 // Subscribe to private channel (to/from server)
 function subscribePrivate(uuid) {
 	faye_client_uuid = (typeof(uuid) === "undefined" ? faye._dispatcher.clientId : uuid);
-  private_channel_subscription = fayeSubscribe('/' + faye_client_uuid, handlePublishedMessage);
+  // private_channel_subscription = fayeSubscribe('/' + faye_client_uuid, handlePublishedMessage);
+  private_channel_subscription = fayeSubscribe('/private/server', handlePublishedMessage);
+
   return faye_client_uuid;
 }
 
@@ -57,6 +78,7 @@ document.addEventListener("DOMContentLoaded", function() {
 	// Only subscribePrivate once faye makes connection - and gets clientId.
 	// I moved this to bottom of <body> on layout, but it doesn't seem to force
 	// recent messages to load last all-at-once with private subscription.
+	faye.addExtension(FayeExt);
 	faye.connect(subscribePrivate); //(guid());
 });
 
