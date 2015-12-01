@@ -41,7 +41,8 @@ module Faye
         ghost.instance_eval &block #&incoming_proc
         ghost.callback.call(ghost.message) if ghost.callback.respond_to?(:call)
       rescue
-        puts "ERROR: faye extension #{self.class.name} (incoming) failed with: #{$!}"
+        message['error'] = "ERROR: faye extension #{self.class.name} (incoming) failed with: #{$!}"
+        puts message['error']
         callback.call(message) if callback.respond_to?(:call)
       ensure
         # callback.call(message) if callback.respond_to?(:call)
@@ -64,7 +65,8 @@ module Faye
         ghost.instance_eval &block #&outgoing_proc
         ghost.callback.call(ghost.message) if ghost.callback.respond_to?(:call)
       rescue
-        puts "ERROR: faye extension #{self.class.name} (outgoing) failed with: #{$!}"
+        message['error'] = "ERROR: faye extension #{self.class.name} (outgoing) failed with: #{$!}"
+        puts message['error']
         callback.call(message) if callback.respond_to?(:call)
       ensure
         #callback.call(message)
