@@ -45,6 +45,23 @@ module Faye
         end
       end
     end
+    
+    # Block non-chat non-meta messages.
+    # BUG: Faye bug - adding 'error' to a message will NOT prevent further extension processing!!!
+    class Whitelist < Faye::Extension
+      incoming do
+        if
+          !request ||
+          message['channel'] =~ /^\/meta/ ||
+          message['data']['action'] == 'chat'
+        then
+          # All is good
+        else
+          message['error'] = "403::Forbidden Only chat messages can be published to other clients"
+          puts "WHITELIST FAIL: #{message}"
+        end
+      end
+    end
 
     # Add extension to intercept private client-server messages.
     # Note that execptions (all?) in an extension will not bubble up to surface.
@@ -57,7 +74,7 @@ module Faye
           #resp = App.new.call(request.env.merge("PATH_INFO" => message['data']['action']))
           resp = App.new.call(request.env.merge("PATH_INFO" => '/test'))
           #faye_client.publish("/#{client_guid}", {action: "chat", data: [message['data']['data'], (request), resp[2]].join(', ') })
-          faye_client.publish("/#{client_guid}", { action:"chat", data:message['data']['data'] })
+          faye_client.publish("/#{client_guid}", { 'action' => "chat", 'data' => message['data']['data'] })
         end
       end
     end
@@ -66,7 +83,7 @@ module Faye
     class TrackRecentMessages < Faye::Extension
       incoming do #|message, request, callback|
         if !message['channel'][%r{/meta}] && request
-          #puts "STORING RECENT MESSAGE #{message['data']}"
+          puts "STORING RECENT MESSAGE #{message['data']}"
           redis_client.rpush "/recent#{message['channel']}", message.to_yaml
           redis_client.ltrim("/recent#{message['channel']}", -5, -1)
         end
@@ -122,7 +139,7 @@ module Faye
                 
                 if messages.any?
                   EM.next_tick do  # This prevents a locking condition when using Puma.
-                    faye_client.publish("/#{client_guid}", {action:"chat", data:messages })
+                    faye_client.publish("/#{client_guid}", {'action' => "chat", 'data' => messages })
                   end
                 end
                 
@@ -159,6 +176,16 @@ module Faye
         end
       end
     end
+    
+    # # Helpful for debugging.
+    # class EndOfChain < Faye::Extension
+    #   incoming do
+    #     puts "END-OF-CHAIN-INCOMING #{message}"
+    #   end
+    #   outgoing do
+    #     puts "END-OF-CHAIN-OUTGOING #{message}"
+    #   end
+    # end
     
   end # Extension
 end # Faye

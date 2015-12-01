@@ -34,6 +34,10 @@ module Faye
         ghost.message = message
         ghost.request = request
         ghost.callback = callback
+        
+        ghost.message['extension_chain_incoming'] ||= []
+        ghost.message['extension_chain_incoming'] << self.class.name
+        
         ghost.instance_eval &block #&incoming_proc
         ghost.callback.call(ghost.message) if ghost.callback.respond_to?(:call)
       rescue
@@ -53,6 +57,10 @@ module Faye
         ghost.message = message
         ghost.request = request
         ghost.callback = callback
+        
+        ghost.message['extension_chain_outgoing'] ||= []
+        ghost.message['extension_chain_outgoing'] << self.class.name
+        
         ghost.instance_eval &block #&outgoing_proc
         ghost.callback.call(ghost.message) if ghost.callback.respond_to?(:call)
       rescue
@@ -98,7 +106,7 @@ module Faye
       set_redis_client
       # TODO: For dev only, remove before publishing to public.
       EM.next_tick do
-        faye_client.publish('/foo', {action:"chat", data:{channel:'/foo', text:'A new faye server in-process client is online', timestamp:DateTime.now}})
+        faye_client.publish('/foo', {'action' => "chat", 'data' => {'channel' => '/foo', 'text' => 'A new faye server in-process client is online', 'timestamp' => DateTime.now}})
       end
     end
     
