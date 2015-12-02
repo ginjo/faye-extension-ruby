@@ -4,18 +4,18 @@ Faye::Extension.load_helpers
 module Faye
   class Extension
 
-    # Outgoing ext to add timestamp if not exist.
+    # Add timestamps if not exist.
     class AddTimestamp < Faye::Extension
       incoming do
         #unless message['channel'] == '/meta/connect' ##|| message['connectionType'] == 'in-process'
-        unless message['channel'][%r{^/meta}]
+        unless channel[%r{^/meta}]
           add_timestamp
         end
       end
 
       outgoing do
         #if !(message['channel'] == '/meta/connect') && message['data']
-        unless message['channel'][%r{^/meta}]
+        unless channel[%r{^/meta}]
           add_timestamp
         end
       end
@@ -23,10 +23,10 @@ module Faye
       # TODO: Do we really need 3 levels of timestamp (protocol, message, chat)?
       def add_timestamp
         message['timestamp'] ||= DateTime.now
-        if message['data'].is_a?(Hash)
-          message['data']['timestamp'] ||= message['timestamp']
-          if message['data']['action'] == "chat" &&  message['data']['data'].is_a?(Hash)
-            message['data']['data']['timestamp'] ||= message['timestamp']
+        if data.is_a?(Hash)
+          data['timestamp'] ||= message['timestamp']
+          if data['action'] == "chat" &&  data['data'].is_a?(Hash)
+            data['data']['timestamp'] ||= message['timestamp']
           end
         end
         #puts "ADD_TIMESTAMP self #{self} message #{message}"
@@ -35,25 +35,26 @@ module Faye
 
     # Add extension to log message info.
     class LogMessageInfo < Faye::Extension
-      class << self; attr_accessor :server; end
-      def_delegators self, :server, :'server='
+      class << self; attr_accessor :last_server; end
+      def_delegators self, :last_server, :'last_server='
       
       incoming do #|message, request, callback|
-        unless message['channel'] == '/meta/connect' ##|| message['connectionType'] == 'in-process'
-          self.server = [message, request, callback] if request
-          puts ["#{request.env['REMOTE_ADDR'] rescue 'SERVER'}", "MESSAGE (incoming): #{message['channel']}", "REQUEST: #{request.object_id}"].join('; ')
+        unless channel == '/meta/connect' ##|| message['connectionType'] == 'in-process'
+          self.last_server = [message, request, callback] if request
+          puts ["#{request.env['REMOTE_ADDR'] rescue 'SERVER'}", "MESSAGE (incoming): #{channel}", "REQUEST: #{request.object_id}"].join('; ')
         end
       end
     end
-    
+
     # Block non-chat non-meta messages.
     # BUG: Faye bug - adding 'error' to a message will NOT prevent further extension processing!!!
+    #      You have to do this yourself (see Extension class).
     class Whitelist < Faye::Extension
       incoming do
         if
-          !request ||
-          message['channel'] =~ /^\/meta/ ||
-          message['data']['action'] == 'chat'
+          !request ||  # TODO: find a better way to determine if this msg originated on server.
+          channel =~ /^\/meta/ ||
+          data['action'] == 'chat'
         then
           # All is good
         else
@@ -63,43 +64,38 @@ module Faye
       end
     end
 
-    # Add extension to intercept private client-server messages.
-    # Note that execptions (all?) in an extension will not bubble up to surface.
-    # Instead, they will cause the message to fail... and retry over & over in some cases.
+    # Handle private client-server messages.
     class HandlePrivateMessage < Faye::Extension
       incoming do #|message, request, callback|
-        if message['channel'] == '/meta/private' &&  client_guid
+        if channel == '/meta/private' &&  client_guid
           message['channel'] = '/private'
           #puts "SERVER RECEIVING PRIVATE MESSAGE FOR #{client_guid}"
           #resp = App.new.call(request.env.merge("PATH_INFO" => message['data']['action']))
           resp = App.new.call(request.env.merge("PATH_INFO" => '/test'))
           #faye_client.publish("/#{client_guid}", {action: "chat", data: [message['data']['data'], (request), resp[2]].join(', ') })
-          faye_client.publish("/#{client_guid}", { 'action' => "chat", 'data' => message['data']['data'] })
+          faye_client.publish("/#{client_guid}", { 'action' => "chat", 'data' => data['data'] })
         end
       end
     end
 
-    # Add extension to track recent messages.
+    # Track recent chat messages.
     class TrackRecentMessages < Faye::Extension
       incoming do #|message, request, callback|
-        if !message['channel'][%r{/meta}] && request
-          puts "STORING RECENT MESSAGE #{message['data']}"
-          redis_client.rpush "/recent#{message['channel']}", message.to_yaml
-          redis_client.ltrim("/recent#{message['channel']}", -5, -1)
+        if !channel[%r{/meta}] && data['action'] == 'chat' && request
+          #puts "STORING RECENT MESSAGE #{message['data']}"
+          redis_client.rpush "/recent#{channel}", message.to_yaml
+          redis_client.ltrim("/recent#{channel}", -5, -1)
         end
       end
     end
 
-    # BUG: This doesn't work since refactoring message format.
-    # Add extension to send recent messages upon subscription.
-    # TODO: The private server subscription should be the first one subscribed on the client side,
-    # otherwise we get confused as to how to handle feedback from regular subscriptions...
-    # There always needs to be a private feedback channel: the private-client-server subscription.
+    # Send recent chat messages upon subscription.
     class SendRecentMessages < Faye::Extension
       incoming do #|message, request, callback|
+        # First get the callback out of the way, then process recent messages.
         callback.call(message)
         @callback = nil
-        if message['channel'][%r{/meta/subscribe}] && request && client_id
+        if channel[%r{/meta/subscribe}] && request && client_id
           #puts "SendRecentMessages#incoming #{client_id} is subscribing to #{message['subscription']}"
 
           # For some reason the subscriptions are not active yet without
@@ -125,7 +121,7 @@ module Faye
                 when has_private_subscription
                   # send recent messages from this currently subscribed channel
                   #puts "SendRecentMessages#incoming #{client_id} has private channel #{client_guid}"
-                  [message['subscription']]
+                  [subscription]
                 else
                   #puts "SendRecentMessages#incoming #{client_id} has no private channel yet on #{client_guid}"
               end
@@ -159,7 +155,7 @@ module Faye
     class SubscribePrivate < Faye::Extension
       incoming do
         #puts "SubscribePrivate#incoming #{message.object_id}"
-        if message['channel'] == '/meta/subscribe' && message['subscription'] == '/private/server'
+        if channel == '/meta/subscribe' && subscription == '/private/server'
           message['subscription'] = "/#{client_guid}"
         end
       end
@@ -169,9 +165,9 @@ module Faye
       # Trying to fix with 'client_guid'.
       outgoing do
         #puts "SubscribePrivate#outgoing #{message.object_id}"
-        if message['channel'] == '/meta/subscribe' && message['subscription'] == "/#{client_guid}"
+        if channel == '/meta/subscribe' && subscription == "/#{client_guid}"
           #puts "SubscribePrivate#outgoing message before: #{message.inspect}"
-          message['ext'] = "private_subscription_response"
+         ext["private_subscription_response"] = true
           #puts "SubscribePrivate#outgoing message after: #{message.inspect}"
         end
       end

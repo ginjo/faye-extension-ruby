@@ -53,7 +53,7 @@ function getTimestamp(){
 FayeExt = {
   incoming: function(message, callback) {
     if(message['channel'] != '/meta/connect') {console.log('faye-incoming', message)}
-    if(message['ext'] == 'private_subscription_response' && message['channel'] == '/meta/subscribe'){
+    if(message['ext']['private_subscription_response'] == true && message['channel'] == '/meta/subscribe'){
 			private_subscription = message['subscription'];
 			faye._channels._channels[private_subscription] = faye._channels._channels['/private/server'];
 			faye._channels._channels[private_subscription]['id'] = private_subscription

@@ -29,48 +29,50 @@ module Faye
     def self.incoming(&block)
       @incoming_proc = block
       self.send :define_method, :incoming do |message, request, callback|
-      begin
-        ghost = self.dup
-        ghost.message = message
-        ghost.request = request
-        ghost.callback = callback
+        begin
+          return callback.call(message) if callback.respond_to?(:call) && message['error']
+          message['ext'] ||= {}
+          message['ext']['incoming_chain'] ||= []
+          message['ext']['incoming_chain'] << self.class.name
         
-        ghost.message['extension_chain_incoming'] ||= []
-        ghost.message['extension_chain_incoming'] << self.class.name
-        
-        ghost.instance_eval &block #&incoming_proc
-        ghost.callback.call(ghost.message) if ghost.callback.respond_to?(:call)
-      rescue
-        message['error'] = "ERROR: faye extension #{self.class.name} (incoming) failed with: #{$!}"
-        puts message['error']
-        callback.call(message) if callback.respond_to?(:call)
-      ensure
-        # callback.call(message) if callback.respond_to?(:call)
-      end # begin/rescue/end
+          # The ghost is necessary (it's really an instance of this instance)
+          # so that each message run can have it's own inst vars,
+          # and the inst vars are necessary so the block in the instance_eval
+          # can have access to message, request, and callback.
+          # (Remember that instance_eval doesn't work with local method vars).
+          ghost = self.dup
+          ghost.message = message
+          ghost.request = request
+          ghost.callback = callback
+          ghost.instance_eval &block #&incoming_proc
+          ghost.callback.call(ghost.message) if ghost.callback.respond_to?(:call)
+        rescue
+          message['error'] = "ERROR: faye extension #{self.class.name} (incoming) failed with: #{$!}"
+          puts message['error']
+          callback.call(message) if callback.respond_to?(:call)
+        end # begin/rescue/end
       end # define_method
     end # self.incoming
   
     def self.outgoing(&block)
       @outgoing_proc = block
       self.send :define_method, :outgoing do |message, request, callback|
-      begin 
-        ghost = self.dup
-        ghost.message = message
-        ghost.request = request
-        ghost.callback = callback
-        
-        ghost.message['extension_chain_outgoing'] ||= []
-        ghost.message['extension_chain_outgoing'] << self.class.name
-        
-        ghost.instance_eval &block #&outgoing_proc
-        ghost.callback.call(ghost.message) if ghost.callback.respond_to?(:call)
-      rescue
-        message['error'] = "ERROR: faye extension #{self.class.name} (outgoing) failed with: #{$!}"
-        puts message['error']
-        callback.call(message) if callback.respond_to?(:call)
-      ensure
-        #callback.call(message)
-      end # begin/resuce/end
+        begin
+          message['ext'] ||= {}
+          message['ext']['outgoing_chain'] ||= []
+          message['ext']['outgoing_chain'] << self.class.name
+          
+          ghost = self.dup
+          ghost.message = message
+          ghost.request = request
+          ghost.callback = callback
+          ghost.instance_eval &block #&outgoing_proc
+          ghost.callback.call(ghost.message) if ghost.callback.respond_to?(:call)
+        rescue
+          message['error'] = "ERROR: faye extension #{self.class.name} (outgoing) failed with: #{$!}"
+          puts message['error']
+          callback.call(message) if callback.respond_to?(:call)
+        end # begin/resuce/end
       end # define_method
     end # self.outgoing
     
@@ -87,9 +89,29 @@ module Faye
       message['clientId']
     end
     
-    # Overwrite this with your own guid, if you prefer.
+    # Overwrite this with your own guid getter (and setter), if you prefer.
     def client_guid
       client_id
+    end
+    
+    def ext
+      message['ext']
+    end
+    
+    def error
+      message['error']
+    end
+    
+    def channel
+      message['channel']
+    end
+    
+    def subscription
+      message['subscription']
+    end
+    
+    def data
+      message['data']
     end
     
     def self.inherited(child)
