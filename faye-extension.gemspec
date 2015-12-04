@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
   spec.authors       = ["William Richardson"]
   spec.email         = ["wbr@mac.com"]
   spec.summary       = %q{Adds an Extension class to help construct Faye server extensions.}
-  spec.description   = %q{Enhances Faye with Faye::Extension class, with optional helpers, to help construction of server-side extensions.}
+  spec.description   = %q{Adds an Extension class to help construct Faye server extensions. Enhances Faye::Extension with optional helpers to facilitate pub/sub, private messaging, rpc, and data updates in the context of your Rack App.}
   spec.homepage      = ""
   spec.license       = "MIT"
 
