@@ -16,7 +16,7 @@ module Faye
     class << self
       attr_reader :faye_server, :faye_client, :redis_client, :children
     end
-
+    
     def_delegators self, :faye_server, :faye_client, :redis_client
   
     attr_accessor :message, :request, :callback
@@ -30,7 +30,11 @@ module Faye
       @incoming_proc = block
       self.send :define_method, :incoming do |message, request, callback|
         begin
-          return callback.call(message) if callback.respond_to?(:call) && message['error']
+          #puts "Incoming IGNORE_ERRORS for '#{self.class.name}' is '#{begin; self.class::IGNORE_MESSAGE_ERRORS; rescue; end}'"
+          # Skip this extension if errors exist, unless IGNORE_MESSAGE_ERRORS == true.
+          # Note that we are using 'self.class::IGNORE_MESSAGE_ERRORS'. If we just use the strait constant, it
+          # refers only to the parent class. Why?
+          return callback.call(message) if callback.respond_to?(:call) && message['error'] && !(defined?(self.class::IGNORE_MESSAGE_ERRORS) && self.class::IGNORE_MESSAGE_ERRORS)
           message['ext'] ||= {}
           message['ext']['incoming_chain'] ||= []
           message['ext']['incoming_chain'] << self.class.name
@@ -47,7 +51,8 @@ module Faye
           ghost.instance_eval &block #&incoming_proc
           ghost.callback.call(ghost.message) if ghost.callback.respond_to?(:call)
         rescue
-          message['error'] = "ERROR: faye extension #{self.class.name} (incoming) failed with: #{$!}"
+          message['error'] ||= ''
+          message['error'] += "ERROR: faye extension #{self.class.name} (incoming) failed with: #{$!}. "
           puts message['error']
           callback.call(message) if callback.respond_to?(:call)
         end # begin/rescue/end
@@ -69,7 +74,8 @@ module Faye
           ghost.instance_eval &block #&outgoing_proc
           ghost.callback.call(ghost.message) if ghost.callback.respond_to?(:call)
         rescue
-          message['error'] = "ERROR: faye extension #{self.class.name} (outgoing) failed with: #{$!}"
+          message['error'] ||= ''
+          message['error'] += "ERROR: faye extension #{self.class.name} (outgoing) failed with: #{$!}. "
           puts message['error']
           callback.call(message) if callback.respond_to?(:call)
         end # begin/resuce/end

@@ -3,6 +3,14 @@ Faye::Extension.load_helpers
 
 module Faye
   class Extension
+    
+    # Faye::Extension blocks further processing of extensions, if message['error'] exists.
+    # These constants will free that block.
+    # Note that message['error'] will always be handled as expected by Faye server,
+    # regardless of Faye::Extensions options.
+    #
+    # IGNORE_MESSAGE_ERRORS = true
+    
 
     # Add timestamps if not exist.
     class AddTimestamp < Faye::Extension
@@ -58,7 +66,8 @@ module Faye
         then
           # All is good
         else
-          message['error'] = "403::Forbidden Only chat messages can be published to other clients"
+          message['error'] ||= ''
+          message['error'] += "403::Forbidden Only chat messages can be published to other clients. "
           puts "WHITELIST FAIL: #{message}"
         end
       end
@@ -81,8 +90,8 @@ module Faye
     # Track recent chat messages.
     class TrackRecentMessages < Faye::Extension
       incoming do #|message, request, callback|
-        if !channel[%r{/meta}] && data['action'] == 'chat' && request
-          #puts "STORING RECENT MESSAGE #{message['data']}"
+        if !channel[%r{/meta}] && request && data['action'] == 'chat'
+          puts "STORING RECENT MESSAGE #{message['data']}"
           redis_client.rpush "/recent#{channel}", message.to_yaml
           redis_client.ltrim("/recent#{channel}", -5, -1)
         end
