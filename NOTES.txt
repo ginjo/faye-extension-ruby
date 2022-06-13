@@ -44,3 +44,11 @@ So, here are my amassed questions (with a big thanks for the outstanding Faye pr
   practice in the domain of a 'gem', where responsiblity for upkeep and
   compatibility is centralized and well-defined?
 
+* Consider renaming the gem to 'fayezer' or 'fayeser'.
+
+* Add tests, specs.
+
+* Consider if Faye::Extensible is of use in this library.
+    https://www.rubydoc.info/gems/faye/1.2.4/Faye/Extensible
+
+

@@ -52,6 +52,8 @@ Exceptions will add to ```message['error']``` and will not bubble up to the surf
 
 Additional helpers exist for accessing message attributes in the context of an extension instance.
 
+TODO: Expand this section.
+
     client_id
     ext
     error

@@ -19,6 +19,17 @@ require 'json'
 
 module Faye
   class Extension
+    
+    # TODO: Consider making these methods mixins from a module, so as to be less
+    # obtrusive to the core Faye::Extension class (mixins won't override existing methods).
+    # There aren't any problems with these 'hard' definitions right now, but J. Coglan could
+    # conceivably create a method with the same name as one of these, in which case our method
+    # would clobber J's. By using a mixin we reduce the potential of breaking Faye::Extension
+    # (would would only break this gem in a method collision situation).
+    # 
+    # Update: this may be a non-issue, since Faye has no Extension class (only Faye::Extensible module).
+    # So this gem is where Faye::Extension originates.
+    # But still... maybe this should be a module of mixins? What are costs & benefits of doing that?
   
     def client_subscriptions
       subscriptions = redis_client.smembers "/clients/#{client_id}/channels"
@@ -52,15 +63,22 @@ module Faye
     end
 
     # Get messages from store in redis.
+    # The messages are serialized data (was using yaml, now using json),
+    # which need to be parsed into ruby objects.
     # TODO: This method may be too specific to finding /recent/<subscription> messages
     def get_messages(channels, range1, range2, restrict=nil)
       #puts "FayExtension#get_messages for channels: #{channels}"
-      messages_as_yaml = channels.map{|ch| redis_client.lrange(ch, range1, range2)}.flatten
-      messages = messages_as_yaml.map do |msg|
-        raw = YAML.load(msg)
-        # This is to ignore legacy messages with no timestamp
-        next unless raw['data'] && raw['data']['timestamp'] && raw['data']['data']
-        (restrict ? raw.send(*restrict) : raw)['data']     
+      messages_from_store = channels.map{|ch| redis_client.lrange(ch, range1, range2)}.flatten
+      messages = messages_from_store.map do |msg|
+        begin
+          raw = JSON.load(msg)
+          # This is to ignore legacy messages with no timestamp
+          next unless raw['data'] && raw['data']['timestamp'] && raw['data']['data']
+          (restrict ? raw.send(*restrict) : raw)['data']
+        rescue
+          puts "FayeExtension helper 'get_messages' raised: #{$!}"
+          ''
+        end
       end.compact #.sort{|a,b| (a['data']['timestamp'] <=> b['data']['timestamp']) rescue 0}
     end
 

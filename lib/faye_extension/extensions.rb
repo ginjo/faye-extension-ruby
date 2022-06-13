@@ -1,4 +1,7 @@
 require 'faye/extension'
+require 'date'
+require 'json'
+
 Faye::Extension.load_helpers
 
 module Faye
@@ -30,7 +33,7 @@ module Faye
 
       # TODO: Do we really need 3 levels of timestamp (protocol, message, chat)?
       def add_timestamp
-        message['timestamp'] ||= DateTime.now
+        message['timestamp'] ||= ::DateTime.now
         if data.is_a?(Hash)
           data['timestamp'] ||= message['timestamp']
           if data['action'] == "chat" &&  data['data'].is_a?(Hash)
@@ -92,7 +95,7 @@ module Faye
       incoming do #|message, request, callback|
         if !channel[%r{/meta}] && request && data['action'] == 'chat'
           puts "STORING RECENT MESSAGE #{message['data']}"
-          redis_client.rpush "/recent#{channel}", message.to_yaml
+          redis_client.rpush "/recent#{channel}", message.to_json
           redis_client.ltrim("/recent#{channel}", -5, -1)
         end
       end

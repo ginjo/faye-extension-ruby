@@ -1,6 +1,8 @@
 require 'faye'
 require File.expand_path('../../faye_extension/rack_adapter', __FILE__)
 require 'forwardable'
+require 'date'
+require 'json'
 
 
 # NOTE: Design subscription logic so that any channel can get any message.
@@ -136,7 +138,7 @@ module Faye
       set_redis_client
       # TODO: For dev only, remove before publishing to public.
       EM.next_tick do
-        faye_client.publish('/foo', {'action' => "chat", 'data' => {'channel' => '/foo', 'text' => 'A new faye server in-process client is online', 'timestamp' => DateTime.now}})
+        faye_client.publish('/foo', {'action' => "chat", 'data' => {'channel' => '/foo', 'text' => 'A new faye server in-process client is online', 'timestamp' => ::DateTime.now}})
       end
     end
     
