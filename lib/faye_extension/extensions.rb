@@ -94,7 +94,8 @@ module Faye
     class TrackRecentMessages < Faye::Extension
       incoming do #|message, request, callback|
         if !channel[%r{/meta}] && request && data['action'] == 'chat'
-          puts "STORING RECENT MESSAGE #{message['data']}"
+          puts "STORING RECENT MESSAGE #{message['data'].to_json}"
+          #puts "STORING RECENT MESSAGE #{message.to_json}"
           redis_client.rpush "/recent#{channel}", message.to_json
           redis_client.ltrim("/recent#{channel}", -5, -1)
         end
