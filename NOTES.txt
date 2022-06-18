@@ -51,4 +51,35 @@ So, here are my amassed questions (with a big thanks for the outstanding Faye pr
 * Consider if Faye::Extensible is of use in this library.
     https://www.rubydoc.info/gems/faye/1.2.4/Faye/Extensible
 
+* According to J.Coglan, Faye runs on top of websockets (faye-websocket).
+  I always thought it was the other way around, but no.
+  So faye is definitly more capable than basic websockets for being a
+  general purpose communication conduit for real-time web applications!
+
+* Anything that is published to '/meta/...' will not be distributed to other clients.
+  Only the server will receive this message.
+  
+* think there are several layers of functionality I'm working towards here. So this gem is becoming
+  one of multiple concerns.
+  
+  1. Enhancing Faye-Ruby with some Extension sugar.
+  2. Providing a way for clients (browsers) to easily create private server subscriptions.
+     a. Automatic
+     b. Secure
+     c. Simple implementation on client AND server.
+  3. Providing a message structure that can handle a variety of application needs.
+     a. Chat messages
+     b. Data updates
+     c. Remote calls/responses
+     d. Administrative tasks
+     
+• Having this gem loaded in ruby is currently breaking the inner workings of faye.
+  Specifically, it breaks the faye_adapter.on(<action-label>) event triggers.
+  It also causes an error when redis is loaded.
+  
+  UPDATE: I think this is expected behavior caused by the creation of message['error']
+  in one of the extensions. This will halt all further processing of the message, within
+  extension AND on the actual backend engine.
+  
+* Need to redo the entire gem to be less obtrusive.
 

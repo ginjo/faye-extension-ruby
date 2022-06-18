@@ -7,8 +7,8 @@ Faye::Extension.load_helpers
 module Faye
   class Extension
     
-    # Faye::Extension blocks further processing of extensions, if message['error'] exists.
-    # These constants will free that block.
+    # Faye::Extension inhibits further processing of extensions, if message['error'] exists.
+    # These constants will free that inhibition.
     # Note that message['error'] will always be handled as expected by Faye server,
     # regardless of Faye::Extensions options.
     #
@@ -164,7 +164,14 @@ module Faye
     
     
     # Experimental auto-subscript of private client-server channel.
-    # Also see companion functions in extension js.
+    # Also see companion functions in extension js (faye_extension_helpers.js.erb).
+    # Once a client has a private subscription to the server, the server can send
+    # private messages (of any type) to the client, like so:
+    #
+    #   # get your fay-server-client however you want, then.
+    #   faye_server.get_client.publish("/ffdbe9de-e460-4239-b789-9a130a7a023c", {action:'chat', data:{"channel"=>'/private', 'text'=>'Hello!'}}).
+    #   # Note that the inner 'data' hash has nothing to do with faye. It is an application level structure (fits the knockout table in the demo).
+    #
     class SubscribePrivate < Faye::Extension
       incoming do
         #puts "SubscribePrivate#incoming #{message.object_id}"
@@ -176,6 +183,7 @@ module Faye
       # TODO: This is flawed in that it requires us to use clientId as the private channel subscription.
       # We should not rely on clientId to do this... but how?
       # Trying to fix with 'client_guid'.
+      # Update: I'm pretty sure this whole extension class SubscribePrivate is working (mostly).
       outgoing do
         #puts "SubscribePrivate#outgoing #{message.object_id}"
         if channel == '/meta/subscribe' && subscription == "/#{client_guid}"
@@ -198,7 +206,3 @@ module Faye
     
   end # Extension
 end # Faye
-
-
-
-

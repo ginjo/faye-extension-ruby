@@ -1,5 +1,13 @@
 // JS FUNCTIONS
-// TODO: extract knockout & custom functions back into 'websocket_faye_redis_knockout' example app
+// TODO: extract knockout & custom functions back into 'websocket_faye_redis_knockout' (now 'faye_testing') example app.
+//
+// Should any of this be part of the FayeExtension gem? Or is it really part of an
+// application logic layer? If faye's concern is to route/distribute messages, most of this is not
+// part of that, since this code is mostly about what to do with messages once received (or before sent).
+//
+// Sometimes you may need to force-reload this file from your browser, if you have
+// updated this file recently.
+// Go to Safari > Empty Cache, or hit Opt + Cmd + E.
 
 
 hostname = document.location.hostname;
@@ -35,7 +43,11 @@ function fayeSubscribe(ch, fn) {
 	return subscription
 }
 
-// // Subscribe to private channel (to/from server)
+// Subscribe to private channel (to/from server). Old way, uses uuid created by browser.
+// This has been replaced with simply fayeSubscript('/private/server'),
+// which handles most of the nitty-gritty server-side, including generating a guid.
+// But there is still the js 'FayeExt' needed in the browser to sort out the private subscription response.
+//
 // function subscribePrivate(uuid) {
 // 	faye_client_uuid = (typeof(uuid) === "undefined" ? faye._dispatcher.clientId : uuid);
 //   // private_channel_subscription = fayeSubscribe('/' + faye_client_uuid, handlePublishedMessage);
@@ -44,15 +56,23 @@ function fayeSubscribe(ch, fn) {
 //   return faye_client_uuid;
 // }
 
-function faye_client_uuid(){faye._dispatcher.clientId}
+
+// J.Coglan says probably not good to use this ID at the application level,
+// since clients can become disconnected/reconnected at any point.
+// But it's good to keep this, since it's an important attribute and
+// rather obscure to find it.
+function fayeClientId(){return faye._dispatcher.clientId}
 
 function getTimestamp(){
 	return (new Date(Date.now()).toString());
 }
 
 FayeExt = {
+  // This is the current handler for establishing /private/server subscription.
   incoming: function(message, callback) {
-    //if(message['channel'] != '/meta/connect') {console.log('faye-incoming', message)}
+    // This line for debugging.
+    if(message['channel'] != '/meta/connect') {console.log('faye-incoming', message)}
+    
     if(message['ext']['private_subscription_response'] == true && message['channel'] == '/meta/subscribe'){
 			private_subscription = message['subscription'];
 			faye._channels._channels[private_subscription] = faye._channels._channels['/private/server'];
@@ -62,10 +82,11 @@ FayeExt = {
 		}
     callback(message);
   },
-  // outgoing: function(message, callback) {
-  //   console.log('outgoing', message);
-  //   callback(message);
-  // }
+  // This is just for debugging.
+  outgoing: function(message, callback) {
+    console.log('outgoing', message);
+    callback(message);
+  }
 };
 // client.addExtension(FayeExt);
 
@@ -91,7 +112,7 @@ document.addEventListener("DOMContentLoaded", function() {
 // Obsolete?
 
 // Generate random UUID
-function guid(){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c)
+function generateGuid(){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c)
 {var r = Math.random()*16|0,v=c=='x'?r:r&0x3|0x8;return v.toString(16);});}
 
 
@@ -109,5 +130,3 @@ function ajax(method, path, callback) {
   }
   xhttp.send();
 }
-
-

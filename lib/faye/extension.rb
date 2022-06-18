@@ -5,7 +5,8 @@ require 'date'
 require 'json'
 
 
-# NOTE: Design subscription logic so that any channel can get any message.
+# NOTES:
+# Design subscription logic so that any channel can get any message.
 # Channels should only be used to route messages, not to provide processing logic.
 # Use a MessageHandler class in js to process all incoming messages.
 
@@ -85,11 +86,11 @@ module Faye
     end # self.outgoing
     
     def added(*args)
-      puts "Faye::RackAdapter adding extension #{self.class.name}";
+      puts "Faye::Extension adding extension #{self.class.name}";
     end
     
     def removed(*args)
-      puts "Faye::RackAdapter removing extension #{self.class.name}";
+      puts "Faye::Extension removing extension #{self.class.name}";
     end
     
     # Shortcut to clientId.

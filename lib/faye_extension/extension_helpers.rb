@@ -120,4 +120,3 @@ module Faye
   
   end # Extension
 end # Faye
-
